@@ -60,17 +60,41 @@ export default function Chat() {
     setMessages((prev) => [...prev, userMessage]);
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: text }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      const data = await response.json();
+      
       const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "This is a design prototype. The actual AI integration will be implemented in the next phase with Gemini!",
+        id: data.id,
+        text: data.message,
         isUser: false,
         timestamp: formatTime(),
       };
+      
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        text: "Sorry, I encountered an error. Please try again.",
+        isUser: false,
+        timestamp: formatTime(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
