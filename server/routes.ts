@@ -5,7 +5,9 @@ import { GoogleGenAI } from "@google/genai";
 import { chatRequestSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+  const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+  });
 
   app.post("/api/chat", async (req, res) => {
     try {
@@ -19,7 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get conversation history
       const history = await storage.getMessages();
-      
+
       // Build chat context from history
       const contents = history
         .slice(-10) // Last 10 messages for context
@@ -30,11 +32,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate response with conversation history
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-2.5-flash",
         contents,
       });
 
-      const aiMessage = response.text || "Sorry, I couldn't generate a response.";
+      const aiMessage =
+        response.text || "Sorry, I couldn't generate a response.";
 
       // Store AI response
       const savedMessage = await storage.addMessage({
