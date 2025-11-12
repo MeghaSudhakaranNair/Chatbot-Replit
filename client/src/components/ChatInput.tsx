@@ -27,14 +27,14 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t border-border p-4">
+    <form onSubmit={handleSubmit} className="p-4">
       <div className="flex gap-3 items-end max-w-4xl mx-auto">
         <Textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type your message..."
-          className="resize-none min-h-[48px] max-h-32 text-base rounded-xl"
+          className="resize-none min-h-[48px] max-h-32 text-base rounded-xl focus-visible:ring-0 focus-visible:ring-offset-0 outline-none"
           disabled={disabled}
           data-testid="input-message"
           rows={1}
