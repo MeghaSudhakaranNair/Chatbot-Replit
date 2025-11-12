@@ -51,18 +51,23 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage
 
-**Development Storage**: In-memory storage implementation (`MemStorage`) using Maps and Arrays for rapid prototyping and testing without database dependencies.
+**Current Storage**: PostgreSQL database using Drizzle ORM with Neon serverless driver (`DbStorage`). The application uses persistent database storage for all messages, ensuring conversation history survives across sessions and page refreshes.
 
 **Schema Design**: 
-- Users table with ID, username, and password fields
+- Users table with ID, username, and password fields (authentication not currently implemented)
 - Messages table with ID, text content, user/AI flag, and timestamp
 - UUID generation for unique identifiers
 
-**Database Integration**: Drizzle ORM configured for PostgreSQL with Neon serverless driver, though currently using in-memory storage. The schema is defined and ready for database migration when needed.
+**Database Configuration**:
+- Neon serverless PostgreSQL via `@neondatabase/serverless` driver
+- WebSocket support configured using `ws` package for Node.js compatibility
+- Connection configured through `DATABASE_URL` environment variable
+- Drizzle ORM for type-safe database queries and migrations
+- Error handling and logging for all database operations
 
 **Session Management**: PostgreSQL session store (`connect-pg-simple`) configured for production-ready session persistence.
 
-**Rationale**: In-memory storage allows for quick development and testing without database setup overhead. The application is architected to easily swap to PostgreSQL persistence by replacing the storage implementation while maintaining the same interface.
+**Migration Notes**: The application previously used in-memory storage (`MemStorage`) but has been migrated to PostgreSQL for persistent data storage. The in-memory implementation remains available in the codebase for reference but is no longer used.
 
 ### External Dependencies
 
