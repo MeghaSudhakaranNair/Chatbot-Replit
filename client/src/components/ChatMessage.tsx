@@ -25,9 +25,14 @@ export default function ChatMessage({ message, isUser, timestamp }: ChatMessageP
         <div
           className={`px-4 py-3 rounded-2xl ${
             isUser
-              ? "bg-primary text-primary-foreground rounded-br-sm"
+              ? "text-white rounded-br-sm shadow-sm"
               : "bg-card text-card-foreground border border-card-border rounded-bl-sm"
           }`}
+          style={
+            isUser
+              ? { background: "linear-gradient(135deg, hsl(158 40% 41%), hsl(150 33% 79%))" }
+              : undefined
+          }
           data-testid="text-message-content"
         >
           <p className={`text-base ${isUser ? "font-medium" : "font-normal"} whitespace-pre-wrap`}>
