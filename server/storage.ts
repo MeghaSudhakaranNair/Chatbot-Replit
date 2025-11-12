@@ -1,8 +1,11 @@
 import { type User, type InsertUser, type Message, type InsertMessage, users, messages } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
 import { eq } from "drizzle-orm";
+import ws from "ws";
+
+neonConfig.webSocketConstructor = ws;
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;

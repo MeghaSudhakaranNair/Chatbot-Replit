@@ -24,6 +24,31 @@ export default function Chat() {
     setIsDark(isDarkMode);
   }, []);
 
+  useEffect(() => {
+    const loadMessages = async () => {
+      try {
+        const response = await fetch("/api/messages");
+        if (response.ok) {
+          const data = await response.json();
+          const formattedMessages = data.map((msg: any) => ({
+            id: msg.id,
+            text: msg.text,
+            isUser: msg.isUser,
+            timestamp: new Date(msg.timestamp).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            }),
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Error loading messages:", error);
+      }
+    };
+
+    loadMessages();
+  }, []);
+
   const toggleTheme = () => {
     const newTheme = !isDark;
     setIsDark(newTheme);
