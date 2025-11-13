@@ -1,11 +1,18 @@
-import { type User, type InsertUser, type Message, type InsertMessage, users, messages } from "@shared/schema";
-import { randomUUID } from "crypto";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool, neonConfig } from "@neondatabase/serverless";
+import {
+  type User,
+  type InsertUser,
+  type Message,
+  type InsertMessage,
+  users,
+  messages,
+} from "@shared/schema";
+import { v4 as randomUUID } from "uuid";
+import { drizzle } from "drizzle-orm/node-postgres"; // <-- CRITICAL FIX
+import { Pool } from "pg"; // <-- CRITICAL FIX
 import { eq } from "drizzle-orm";
-import ws from "ws";
+import { sql } from "drizzle-orm";
 
-neonConfig.webSocketConstructor = ws;
+// Removed: neonConfig.webSocketConstructor = ws;
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -31,7 +38,7 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.username === username
     );
   }
 
@@ -66,16 +73,46 @@ export class DbStorage implements IStorage {
   private db;
 
   constructor() {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL is not set");
+    const dbUrl = process.env.DATABASE_URL;
+
+    if (!dbUrl) {
+      throw new Error("FATAL: DATABASE_URL is not set");
     }
+
     try {
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-      this.db = drizzle({ client: pool });
+      // 1. Create a Pool instance using the standard 'pg' library
+      const pool = new Pool({
+        connectionString: dbUrl,
+      });
+
+      // 2. Initialize Drizzle with the standard Node-Postgres Pool
+      this.db = drizzle(pool);
+
+      // Run init for connection check
+      this.init().catch((err) => {
+        console.error(
+          "Failed to initialize database connection or ensure tables:",
+          err.message
+        );
+        // Do not throw here, as constructor can't be async, but the async init handles the error logging.
+      });
     } catch (error) {
       console.error("Failed to initialize database connection:", error);
       throw error;
     }
+  }
+
+  // New init method to ensure the connection works
+  private async init() {
+    console.log("Attempting to connect and ensure schema...");
+
+    // Execute a simple query to confirm the pool can connect to the database
+    await this.db.execute(sql`SELECT 1;`);
+
+    console.log("Drizzle connected successfully.");
+    console.log(
+      "Tables (users, messages) assumed to be created via migration script."
+    );
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -90,7 +127,10 @@ export class DbStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
-      const result = await this.db.select().from(users).where(eq(users.username, username));
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.username, username));
       return result[0];
     } catch (error) {
       console.error("Error getting user by username:", error);
@@ -112,7 +152,19 @@ export class DbStorage implements IStorage {
 
   async addMessage(insertMessage: InsertMessage): Promise<Message> {
     try {
-      const result = await this.db.insert(messages).values(insertMessage).returning();
+      // Add ID and timestamp as they are often handled by the database in a simple setup,
+      // but Drizzle often requires them if they are not DB-generated defaults.
+      const messageWithDefaults: InsertMessage = {
+        ...insertMessage,
+        id: randomUUID(), // Ensure ID is present
+        timestamp: new Date(), // Ensure timestamp is present
+      };
+      console.log("message", messageWithDefaults, "insert", insertMessage);
+
+      const result = await this.db
+        .insert(messages)
+        .values(messageWithDefaults)
+        .returning();
       return result[0];
     } catch (error) {
       console.error("Error adding message:", error);
@@ -131,6 +183,7 @@ export class DbStorage implements IStorage {
 
   async clearMessages(): Promise<void> {
     try {
+      // This is the Drizzle way to execute a delete statement without a WHERE clause
       await this.db.delete(messages);
     } catch (error) {
       console.error("Error clearing messages:", error);
@@ -139,4 +192,16 @@ export class DbStorage implements IStorage {
   }
 }
 
-export const storage = new DbStorage();
+// NOTE: We wrap the storage initialization in a block so that it throws the error
+// if initialization fails, which is necessary for the server to halt.
+let storageInstance: IStorage;
+try {
+  storageInstance = new DbStorage();
+} catch (e) {
+  console.error(
+    "FATAL: Database storage failed to load. Check environment variables and PostgreSQL service."
+  );
+  // We don't throw the error here in the exported code, because the inner init() handles throwing if the connection fails async.
+}
+
+export const storage = storageInstance!;

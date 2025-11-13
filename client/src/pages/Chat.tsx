@@ -30,6 +30,10 @@ export default function Chat() {
         const response = await fetch("/api/messages");
         if (response.ok) {
           const data = await response.json();
+          // const sortedData = data.sort(
+          //   (a: any, b: any) =>
+          //     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          // );
           const formattedMessages = data.map((msg: any) => ({
             id: msg.id,
             text: msg.text,
@@ -99,14 +103,14 @@ export default function Chat() {
       }
 
       const data = await response.json();
-      
+
       const aiMessage: Message = {
         id: data.id,
         text: data.message,
         isUser: false,
         timestamp: formatTime(),
       };
-      
+
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error("Error sending message:", error);
@@ -143,11 +147,7 @@ export default function Chat() {
           onClick={toggleTheme}
           data-testid="button-theme-toggle"
         >
-          {isDark ? (
-            <Sun className="w-5 h-5" />
-          ) : (
-            <Moon className="w-5 h-5" />
-          )}
+          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </Button>
       </header>
 
